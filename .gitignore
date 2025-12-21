@@ -4,6 +4,7 @@
 # Generated output and assets
 output/
 temp_font/
+assets/
 
 # Runtime state
 history.json
