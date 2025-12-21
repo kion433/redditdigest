@@ -80,6 +80,14 @@ def upload_loop():
     if not login(cl, config):
         return
 
+    # WARM UP: Fetch timeline to look like a human and validate session
+    try:
+        print("Warming up session (fetching timeline)...")
+        cl.get_timeline_feed()
+        print("Session warm-up successful.")
+    except Exception as e:
+        print(f"Warm-up failed: {e}. Session might be restricted.")
+
     while True:
         vid_path, meta_path = get_next_video()
         
