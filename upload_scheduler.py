@@ -53,7 +53,7 @@ def login(cl, config):
         print(f"Login failed: {e}")
         return False
 
-from instagrapi.exceptions import LoginRequired
+from instagrapi.exceptions import LoginRequired, VideoNotUpload
 
 def upload_loop():
     print("--- Instagram Drip-Feed Scheduler ---")
@@ -106,14 +106,14 @@ def upload_loop():
                 print(f"Sleeping for {sleep_time/60:.1f} minutes...")
                 time.sleep(sleep_time)
                 
-            except LoginRequired:
-                print("Session expired or login required.")
+            except (LoginRequired, VideoNotUpload) as e:
+                print(f"Session issue detected: {e}")
                 
                 # Delete bad session file to force fresh login next time
                 if os.path.exists(SESSION_FILE):
                     os.remove(SESSION_FILE)
                 
-                print("Attempting relogin (Fresh)...")
+                print("Bad session deleted. Attempting relogin (Fresh)...")
                 if login(cl, config):
                     print("Relogin successful. Retrying upload in 60s...")
                     time.sleep(60)
