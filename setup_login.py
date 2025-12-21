@@ -1,4 +1,5 @@
 from instagrapi import Client
+from instagrapi.exceptions import TwoFactorRequired
 import os
 from dotenv import load_dotenv
 
@@ -25,14 +26,17 @@ def standard_login():
     try:
         print(f"Attempting login for: {username}...")
         cl.login(username, password)
-        
-        print("Login Successful!")
-        cl.dump_settings(SESSION_FILE)
-        print(f"Session saved to '{SESSION_FILE}'.")
-        
+    except TwoFactorRequired:
+        print("\n!!! 2FA REQUIRED !!!")
+        code = input("Enter the 2FA code sent to your SMS/App: ").strip()
+        cl.two_factor_login(code)
     except Exception as e:
         print(f"Login failed: {e}")
-        print("Try using 'python setup_session_via_cookie.py' instead if you hit 2FA/Challenge loops.")
+        return
+
+    print("Login Successful!")
+    cl.dump_settings(SESSION_FILE)
+    print(f"Session saved to '{SESSION_FILE}'.")
 
 if __name__ == "__main__":
     standard_login()

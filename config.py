@@ -47,6 +47,7 @@ os.environ["PATH"] += os.pathsep + ffmpeg_path
 
 # --- Persistent Device Identity ---
 import uuid
+import json
 
 DEVICE_CONFIG_FILE = "device_config.json"
 
