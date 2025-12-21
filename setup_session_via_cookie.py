@@ -20,19 +20,9 @@ def create_session_via_cookie():
 
     cl = Client()
     
-    # Emulate Samsung Galaxy S23 Ultra to match scheduler
-    cl.set_device({
-        "app_version": "269.0.0.18.75",
-        "android_version": 29,
-        "android_release": "10.0",
-        "dpi": "450dpi",
-        "resolution": "1080x2340",
-        "manufacturer": "Samsung",
-        "device": "SM-S918B",
-        "model": "Galaxy S23 Ultra",
-        "cpu": "samsungexynos",
-        "version_code": "314596395"
-    })
+    # Load persistent device identity (S23 + Fixed UUIDs)
+    from config import get_device_settings
+    cl.set_device(get_device_settings())
     
     try:
         print("Verifying session...")
