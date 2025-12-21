@@ -6,3 +6,5 @@ python-dotenv
 asyncio
 moviepy
 instagrapi
+selenium
+webdriver-manager
