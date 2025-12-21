@@ -1,0 +1,17 @@
+# Environment variables
+.env
+
+# Generated output and assets
+output/
+temp_font/
+
+# Runtime state
+history.json
+
+# Python
+__pycache__/
+*.pyc
+
+# System
+.DS_Store
+Thumbs.db
