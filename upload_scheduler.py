@@ -53,10 +53,26 @@ def login(cl, config):
         print(f"Login failed: {e}")
         return False
 
+from instagrapi.exceptions import LoginRequired
+
 def upload_loop():
     print("--- Instagram Drip-Feed Scheduler ---")
     config = load_config()
     cl = Client()
+
+    # Emulate Samsung Galaxy S23 Ultra to be safer
+    cl.set_device({
+        "app_version": "269.0.0.18.75",
+        "android_version": 29,
+        "android_release": "10.0",
+        "dpi": "450dpi",
+        "resolution": "1080x2340",
+        "manufacturer": "Samsung",
+        "device": "SM-S918B",
+        "model": "Galaxy S23 Ultra",
+        "cpu": "samsungexynos",
+        "version_code": "314596395"
+    })
     
     # Ensure dirs
     os.makedirs(UPLOADED_DIR, exist_ok=True)
@@ -90,6 +106,22 @@ def upload_loop():
                 print(f"Sleeping for {sleep_time/60:.1f} minutes...")
                 time.sleep(sleep_time)
                 
+            except LoginRequired:
+                print("Session expired or login required.")
+                
+                # Delete bad session file to force fresh login next time
+                if os.path.exists(SESSION_FILE):
+                    os.remove(SESSION_FILE)
+                
+                print("Attempting relogin (Fresh)...")
+                if login(cl, config):
+                    print("Relogin successful. Retrying upload in 60s...")
+                    time.sleep(60)
+                    continue # Retry immediately
+                else:
+                    print("Relogin failed. Terminating.")
+                    return
+
             except Exception as e:
                 print(f"Upload error: {e}")
                 time.sleep(60) # Wait 1 min on error
