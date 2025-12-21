@@ -1,0 +1,8 @@
+requests
+edge-tts
+openai
+ffmpeg-python
+python-dotenv
+asyncio
+moviepy
+instagrapi
