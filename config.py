@@ -30,6 +30,17 @@ BACKGROUND_VIDEO_PATH = "assets/backgrounds"
 OUTPUT_VIDEO_PATH = "output"
 FONT_PATH = "assets/fonts/KomikaAxis.ttf" # Custom user font
 
+# TTS Voices (EdgeTTS)
+TTS_VOICES = [
+    "en-US-AriaNeural",       # Female (US)
+    "en-US-GuyNeural",        # Male (US)
+    "en-US-JennyNeural",      # Female (US)
+    "en-US-ChristopherNeural",# Male (US)
+    "en-GB-SoniaNeural",      # Female (UK)
+    "en-GB-RyanNeural",       # Male (UK)
+]
+
+
 # Add FFmpeg to PATH for current session
 ffmpeg_path = r"C:\Users\HP\AppData\Local\Microsoft\WinGet\Links"
 os.environ["PATH"] += os.pathsep + ffmpeg_path

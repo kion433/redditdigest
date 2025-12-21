@@ -1,6 +1,7 @@
 import asyncio
 from openai import OpenAI
 import edge_tts
+import random
 import os
 import json
 from config import *
@@ -59,11 +60,17 @@ class ContentGenerator:
             print(f"Error generating script: {e}")
             return None
 
-    async def generate_audio(self, text, output_filename="speech.mp3", voice="en-US-AriaNeural"):
+    async def generate_audio(self, text, output_filename="speech.mp3", voice=None):
         """
         Generates TTS audio AND precise word-level JSON timestamps using Edge-TTS python library.
+        Selects a random voice if none is provided.
         """
         try:
+            # Randomize voice if not specified or default
+            if not voice:
+                voice = random.choice(TTS_VOICES)
+            
+            print(f"Generating audio ({len(text)} chars) using Voice: {voice}...")
             # Sanitize text to prevent WordBoundary failures (Edge-TTS bug with special chars)
             clean_text = text.replace('"', '').replace("'", "").replace("’", "").strip()
             print(f"Generating audio ({len(clean_text)} chars) + Sync Data...")
