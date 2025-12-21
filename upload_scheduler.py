@@ -91,8 +91,8 @@ def upload_loop():
                 
                 caption = data.get("caption", "New video! #viral")
                 
-                print("Uploading...")
-                cl.video_upload(vid_path, caption) # LIVE UPLOAD ENABLED
+                print("Uploading as Reel...")
+                cl.clip_upload(vid_path, caption) # LIVE UPLOAD ENABLED (Reels)
                 print("Upload successful!")
                 
                 # Move to uploaded
