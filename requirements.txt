@@ -8,3 +8,4 @@ moviepy
 instagrapi
 selenium
 webdriver-manager
+yt-dlp

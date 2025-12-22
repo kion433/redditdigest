@@ -144,7 +144,63 @@ class VideoEngine:
                 print(f"Adding subtitles from {subtitle_file}...")
                 final_clip = add_subtitles(video_with_images, subtitle_file, font_path=FONT_PATH)
             
-            # Output
+            # --- 6. Audio Mixing (TTS + BGM) ---
+            final_audio = audio_clip # Use the loaded audio_clip as the base for final_audio
+            
+            try:
+                from modules.music_downloader import get_music_for_mood
+                from moviepy.editor import AudioFileClip, CompositeAudioClip, afx
+                
+                # 1. Get Mood
+                mood = script_data.get('hook_mood', 'Neutral')
+                print(f"Fetching Background Music for Mood: {mood}")
+                
+                # 2. Get/Download Track
+                bgm_path = get_music_for_mood(mood, "assets/music")
+                
+                if bgm_path and os.path.exists(bgm_path):
+                    # 3. Load & Process BGM
+                    bgm_clip = AudioFileClip(bgm_path)
+                    
+                    # Random Start Logic
+                    # Pick a random point in the song to start
+                    if bgm_clip.duration > 0:
+                        bgm_start = random.uniform(0, bgm_clip.duration)
+                    else:
+                        bgm_start = 0
+                        
+                    # Calculate total duration needed to support starting late + video length
+                    needed_duration = bgm_start + final_clip.duration + 1.0 # +1s buffer
+                    
+                    # Loop the track enough times to cover the needed duration
+                    # afx.audio_loop repeats the clip content
+                    bgm_looped = bgm_clip.fx(afx.audio_loop, duration=needed_duration)
+                    
+                    # Cut the segment from [start, start + duration]
+                    # This achieves the "Random Start + Loop if hit end" behavior
+                    bgm_clip = bgm_looped.subclip(bgm_start, bgm_start + final_clip.duration)
+                    
+                    # Set Volume (Low Ambience)
+                    
+                    # Set Volume (Low Ambience)
+                    bgm_clip = bgm_clip.volumex(0.12) # 12% Volume
+                    
+                    # Trim exactly to video length
+                    bgm_clip = bgm_clip.subclip(0, final_clip.duration)
+                    
+                    # 4. Mix
+                    final_audio = CompositeAudioClip([audio_clip, bgm_clip]) # Use audio_clip here
+                    print("Background Music Mixed Successfully.")
+                else:
+                    print("Background Music skipped (Download failed or file missing).")
+                    
+            except Exception as e:
+                print(f"Background Music Warning: {e}")
+                # non-critical, proceed with just voice
+            
+            final_clip = final_clip.set_audio(final_audio)
+
+            # --- 7. Write Output ---
             final_filename = f"final_{random.randint(1000,9999)}.mp4"
             output_filepath = os.path.join(self.output_path, final_filename)
             
