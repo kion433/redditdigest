@@ -167,7 +167,7 @@ class ContentGenerator:
         from moviepy.editor import concatenate_audioclips, AudioFileClip
         
         # Voice Mapping
-        NARRATOR_VOICE = "en-US-GuyNeural"
+        NARRATOR_VOICE = random.choice(TTS_VOICES)
         
         # Determine Heckler Voice based on Context (Subreddit)
         subreddit = ""
