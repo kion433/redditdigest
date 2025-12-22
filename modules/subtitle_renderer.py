@@ -1,5 +1,5 @@
 from PIL import Image, ImageDraw, ImageFont
-from moviepy import ImageClip, CompositeVideoClip
+from moviepy.editor import ImageClip, CompositeVideoClip
 import numpy as np
 import re
 import os
@@ -62,29 +62,27 @@ def create_caption_clip(text, duration, video_w, video_h, font_path=None):
         text_w = right - left
         text_h = bottom - top
     except AttributeError:
+        # Compatibility for older Pillow versions
         text_w, text_h = draw.textsize(text, font=font, stroke_width=stroke_width)
     
-    # Add GENEROUS padding to prevent cutoff (especially for descenders like 'g', 'y')
+    # Add GENEROUS padding to prevent cutoff
     w, h = text_w + 100, text_h + 100
     
     img = Image.new("RGBA", (int(w), int(h)), (0, 0, 0, 0))
     draw = ImageDraw.Draw(img)
     
     # Draw text centered in the image
-    # Offset x,y by 50 (half of the extra 100 padding) to keep it valid
     draw.text((50, 50), text, font=font, fill=text_color, stroke_fill=stroke_color, stroke_width=stroke_width)
     
     # Create ImageClip
     img_array = np.array(img)
-    txt_clip = ImageClip(img_array).with_duration(duration)
+    txt_clip = ImageClip(img_array).set_duration(duration)
     
     # Center perfectly on screen
-    txt_clip = txt_clip.with_position(('center', 'center'))
+    txt_clip = txt_clip.set_position(('center', 'center'))
     
     # "Pop" Effect (Resize from 0.5 to 1.2 then 1.0)
-    # t=0 -> 0.5 (small start)
-    # t=0.1 -> 1.2 (big pop)
-    # t=0.2 -> 1.0 (settle)
+    # Using MoviePy 1.x logic (resize accepts function)
     def resize_func(t):
         if t < 0.1:
             return 0.5 + (0.7 * (t / 0.1)) # 0.5 -> 1.2
@@ -94,7 +92,7 @@ def create_caption_clip(text, duration, video_w, video_h, font_path=None):
             return 1.0
             
     # Apply resize effect
-    txt_clip = txt_clip.resized(resize_func) 
+    txt_clip = txt_clip.resize(resize_func) 
     
     return txt_clip
 
@@ -124,7 +122,7 @@ def add_subtitles(video_clip, data_path, font_path="arial.ttf"):
             if duration < 0.15: duration = 0.15
             
             txt_clip = create_caption_clip(word, duration, w, h, font_path)
-            txt_clip = txt_clip.with_start(start)
+            txt_clip = txt_clip.set_start(start)
             subtitle_clips.append(txt_clip)
             
     else:
@@ -150,7 +148,7 @@ def add_subtitles(video_clip, data_path, font_path="arial.ttf"):
                 if word_duration < 0.1: pass
 
                 txt_clip = create_caption_clip(word, word_duration, w, h, font_path)
-                txt_clip = txt_clip.with_start(current_time)
+                txt_clip = txt_clip.set_start(current_time)
                 subtitle_clips.append(txt_clip)
                 current_time += word_duration
         

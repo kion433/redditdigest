@@ -30,7 +30,9 @@ class ContentGenerator:
         {
           "script_text": "The full spoken script including Hook, Story, and CTA. Approx 150-180 words.",
           "caption": "Viral caption with hashtags.",
-          "title_overlay": "Punchy 3-5 word cover title"
+          "title_overlay": "Punchy 3-5 word cover title",
+          "hook_image_keyword": "A single, highly visual noun/concept related to the hook (e.g. 'Ghost', 'Money', 'Police Car') for an image search.",
+          "retention_keywords": ["List", "of", "3-5", "single", "visual", "keywords", "from", "the", "story"]
         }
         """
         
