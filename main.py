@@ -59,8 +59,12 @@ async def run_one_cycle(reddit, content_gen, video_engine, history, index, total
     temp_audio_name = f"temp_audio_{index}.mp3"
     audio_path = os.path.join(OUTPUT_VIDEO_PATH, temp_audio_name)
     
-    print(f"Generating audio ({len(script_data['script_text'])} chars)...")
-    result = await content_gen.generate_audio(script_data['script_text'], audio_path)
+    # Determine Input Source (Segments > Text)
+    script_input = script_data.get('script_segments', script_data.get('script_text'))
+    
+    input_len = len(str(script_input)) # Approx length for logging
+    print(f"Generating audio (Input Len: {input_len})...")
+    result = await content_gen.generate_audio(script_input, audio_path)
     
     if not result:
         print("Failed to generate audio.")

@@ -4,51 +4,55 @@ import random
 from duckduckgo_search import DDGS
 
 # Curated Library of High-Quality Cinematic Search Terms
+# Curated Library of Meme/Reaction Search Terms (Dopamine Focused)
 EMOTION_QUERIES = {
     "Shock": [
-        "cinematic close up portrait of shocked person dramatic lighting",
-        "stunned face expression cinematic photography",
-        "person gasping in surprise dramatic 4k",
-        "shocked human eyes close up cinematic"
+        "shocked face meme funny",
+        "surprised pikachu meme high quality",
+        "jaw drop meme reaction",
+        "shookt meme funny"
     ],
     "Anger": [
-        "angry person shouting cinematic portrait",
-        "furious face expression dramatic lighting dark",
-        "rage emotion human face cinematic",
-        "intense angry eyes close up photography"
+        "angry rage meme funny",
+        "pissed off meme reaction",
+        "arthur fist meme high quality",
+        "angry bird meme funny"
     ],
     "Fear": [
-        "scared person hiding dark cinematic",
-        "terrified face expression horror lighting",
-        "fearful human eyes close up dramatic",
-        "person screaming in fear cinematic shot"
+        "scared meme funny",
+        "nervous sweating meme reaction",
+        "panik meme high quality",
+        "fear reaction meme funny"
     ],
     "Sadness": [
-        "sad person crying cinematic portrait",
-        "depressed human sitting alone dark room",
-        "tearful eyes close up emotional photography",
-        "heartbroken person dramatic lighting"
+        "crying cat meme funny",
+        "sad pablo escobar meme high quality",
+        "trying not to cry meme reaction",
+        "pain meme funny"
     ],
     "Joy": [
-        "person laughing uncontrollably cinematic",
-        "tears of joy face expression dramatic",
-        "ecstatic human emotion cinematic portrait",
-        "happy person celebrating dramatic lighting"
+        "celebration meme funny",
+        "happiness noise meme reaction",
+        "dancing cat meme gif",
+        "success kid meme high quality"
     ],
     "Disgust": [
-        "disgusted face expression cinematic",
-        "person reacting with disgust dramatic lighting",
-        "repulsed human emotion portrait"
+        "disgusted tanjiro meme",
+        "eww meme funny reaction",
+        "absolutely disgusting meme",
+        "side eye meme funny"
     ],
     "Confused": [
-        "confused person thinking cinematic",
-        "puzzled face expression dramatic lighting",
-        "disoriented human portrait cinematic"
+        "confused math lady meme high quality",
+        "confused nick young meme",
+        "visible confusion meme reaction",
+        "what meme funny"
     ],
     "Neutral": [
-        "serious person portrait cinematic lighting",
-        "neutral face expression dramatic photography",
-        "calm human face close up cinematic"
+        "staring blankly meme",
+        "awkward silence meme funny",
+        "waiting meme skeleton",
+        "ok meme reaction"
     ]
 }
 

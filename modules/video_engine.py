@@ -111,18 +111,40 @@ class VideoEngine:
                 hook_clip = create_centered_image_clip(hook_path, 0, 3)
                 if hook_clip: image_clips.append(hook_clip)
 
-            # B. Retention Images
-            retention_moods = script_data.get('retention_moods', [])
-            if retention_moods:
-                available_time = audio_duration - 4
+            # B. Retention Images (Memes)
+            # Prioritize specific "visual_keywords" if available, else fallback to moods
+            visual_queries = script_data.get('visual_keywords', script_data.get('retention_moods', []))
+            
+            if visual_queries:
+                # We want them to stay longer (4s), so we might fit fewer images
+                # Calculate how many 4s images fit in the available time
+                available_time = audio_duration - 4 # buffer for hook
+                
+                # Limit number of images to prevent overcrowding
+                # If we have 20s available, we can fit ~5 images
+                max_images = int(available_time / 4.5) 
+                if max_images < 1: max_images = 1
+                
+                # Take top N queries
+                queries_to_use = visual_queries[:max_images]
+                
                 if available_time > 0:
-                    interval = available_time / (len(retention_moods) + 1)
+                    # Space them out evenly or just back-to-back?
+                    # Let's do evenly distributed centers
+                    interval = available_time / (len(queries_to_use) + 1)
                     
-                    for i, mood in enumerate(retention_moods):
-                        print(f"Downloading Retention Image (Mood: {mood})")
-                        path = download_image(mood, temp_img_dir, f"retention_{i}")
+                    for i, query in enumerate(queries_to_use):
+                        print(f"Downloading Retention Image (Query: {query})")
+                        # Add 'meme' to query if not present for better results
+                        search_q = query if "meme" in query.lower() else f"{query} meme funny"
+                        
+                        path = download_image(search_q, temp_img_dir, f"retention_{i}")
+                        
+                        # Start time: Hook end (3s) + interval step
                         start_t = 3 + (i * interval)
-                        clip = create_centered_image_clip(path, start_t, 2.5)
+                        
+                        # Duration: 4 seconds (User Request)
+                        clip = create_centered_image_clip(path, start_t, 4.0)
                         if clip: image_clips.append(clip)
 
             # --- COMPOSITING ---

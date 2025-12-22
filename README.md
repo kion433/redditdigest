@@ -5,25 +5,28 @@
 
 ## 🚀 Features
 
-*   **Content Engine**:
-    *   **100+ Source Subreddits**: Automatically cycles through a curated list of top communities (`r/confessions`, `r/TIFU`, `r/AskReddit`, `r/creepyencounters`, etc.).
-    *   **Viral Scripting**: Uses LLMs (DeepSeek or OpenAI) to rewrite posts into engaging scripts with Hooks and Calls-to-Action.
-    *   **Smart Filtering**: Auto-rejects NSFW, political, or low-quality posts.
+### 1. 🎭 "The Heckler" (Two-Voice Mode)
+- **Concept**: A serious narrator (`en-US-GuyNeural`) tells the story, while a rude/hype-man "Heckler" (`en-US-ChristopherNeural` or random male voice) interrupts every 15s.
+- **Implementation**:
+    - **LLM Prompting**: Generates a JSON list of dialogue segments: `[{"role": "narrator", "text": "..."}, {"role": "heckler", "text": "NO WAY!"}]`.
+    - **Audio Stitching**: `content_generator.py` generates individual audio clips for each segment and seamlessly stitches them into a single track with unified timestamps.
 
-*   **Audio & Sync (State of the Art)**:
-    *   **Hyper-Realistic TTS**: Uses Microsoft Edge Neural Voices (free, high quality).
-    *   **Hybrid Sync Technology**:
-        *   **Primary**: Extracts exact `WordBoundary` timestamps for 100% perfect lip-sync.
-        *   **Fallback**: Crash-proof CLI backup ensures subtitles *always* generate, even on unstable environments.
+### 2. 🐸 Contextual Meme Engine
+- **Concept**: Instead of generic stock photos, the bot searches for **Dank Memes** related to the specific story context.
+- **Workflow**:
+    - **Visual Keyword Extraction**: LLM analyzes the story and suggests 3-5 specific terms (e.g., "Cheating boyfriend meme", "Spiderman pointing meme").
+    - **Smart Search**: Uses these keywords to fetch relevant memes via `bing-image-downloader`.
+    - **Timing**: Memes hold for **4.0 seconds** to allow viewers to read/register the joke.
 
-*   **Video Production**:
-    *   **Visuals**: 9:16 Vertical Video cropping.
-    *   **"Poppy" Subtitles**: TikTok-style word-by-word animation with yellow highlighting and "pop" effects.
-    *   **Dynamic Backgrounds**: Randomly selects and seeks through Minecraft Parkour or GTA gameplay footage.
+### 3. 🎵 Smart Background Music
+- **Mood Detection**: Analyzes the story sentiment (e.g., "Sadness", "Joy").
+- **Dynamic Selection**: Fetches royalty-free music matching that mood.
+- **Random Start & Loop**: Starts the track at a random point and loops it, ensuring every video sounds different.
 
-*   **Workflow**:
-    *   **Batch Mode**: Generate 1, 10, or 100 videos in a single command.
-    *   **History Tracking**: Never generates the same post twice.
+### 4. 🤖 Autonomous "Forever" Mode
+- **Aggressive Scraping**: Retries Reddit fetching with different sort strategies (Top/Hot/Contro) until content is found.
+- **Robustness**: Handles 403 Forbidden errors, missing images, and TTS failures gracefully with fallbacks.
+- **Metadata**: Saves a `.json` sidecar for every video for future scheduling integration.
 
 ---
 
