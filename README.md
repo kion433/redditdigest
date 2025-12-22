@@ -28,6 +28,13 @@
 - **Robustness**: Handles 403 Forbidden errors, missing images, and TTS failures gracefully with fallbacks.
 - **Metadata**: Saves a `.json` sidecar for every video for future scheduling integration.
 
+### 6. 🌗 Two Video Modes
+- **Classic Mode**: Standard full-screen gameplay background.
+- **Brainrot Mode**: Split-screen layout.
+    - **Top**: Satisfying videos (Slime, Sand, Soap Cutting).
+    - **Bottom**: Gameplay footage.
+    - **Why**: Maximizes visual retention.
+
 ---
 
 ## 🛠️ Installation
@@ -67,7 +74,11 @@ pip install -r requirements.txt
 ### Run Batch Generation
 Generate 100 videos automatically (Autopilot):
 ```bash
+# Default (Classic Mode - Full gameplay)
 python main.py --count 100
+
+# Brainrot Mode (Split Screen)
+python main.py --count 100 --mode brainrot
 ```
 
 ### Start Scheduler (Drip-Feed Upload)
@@ -133,9 +144,21 @@ Follow the prompts. If it fails with "Suspicious Login", try Option B.
 
 ## 🛡️ Troubleshooting
 
-*   **"ImageMagick not found"**: Edit `config.py` (or MoviePy config) to point to your `magick.exe`.
-*   **"No subtitles found"**: The system will auto-switch to CLI Fallback mode. Check console logs for "CLI Fallback Successful".
-*   **"No posts found"**: The strict quality filters might be skipping posts. Just run the batch again; it will pick a different subreddit.
+## Missing Subtitles?
+- This project now includes a self-healing fallback. If `edge-tts` fails to return `WordBoundary` events (a common API glitch), the code automatically switches to character-based estimation.
+- Check `output/temp_audio_1.json` - if it has data, the system is working.
+
+## "Download Error" for Images?
+- The new `image_downloader.py` is much more aggressive. It will try:
+  1. High-quality curated terms.
+  2. Your exact keyword.
+  3. A "meme" version of your keyword.
+  4. DuckDuckGo Search.
+- Only if ALL of these fail will you see a placeholder.
+
+## "FFMPEG Handle Invalid" Error?
+- This is a known Windows-specific warning from `moviepy`. It is harmless logic during cleanup. If you see "Moviepy - Done", your video is fine.
+s might be skipping posts. Just run the batch again; it will pick a different subreddit.
 
 ---
 

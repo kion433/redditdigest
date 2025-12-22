@@ -10,7 +10,7 @@ from modules.video_engine import VideoEngine
 from modules.post_history import PostHistory
 # from modules.instagram_client import InstagramClient
 
-async def run_one_cycle(reddit, content_gen, video_engine, history, index, total):
+async def run_one_cycle(reddit, content_gen, video_engine, history, index, total, mode="classic", fast_mode=False):
     print(f"\n--- [Batch {index}/{total}] Starting Cycle ---")
     
     # 2. Get Content
@@ -60,11 +60,17 @@ async def run_one_cycle(reddit, content_gen, video_engine, history, index, total
     audio_path = os.path.join(OUTPUT_VIDEO_PATH, temp_audio_name)
     
     # Determine Input Source (Segments > Text)
-    script_input = script_data.get('script_segments', script_data.get('script_text'))
+    script_segments = script_data.get('script_segments')
+    if script_segments and fast_mode:
+        print("[DEBUG] Fast Mode: Truncating script to 3 segments for rapid testing.")
+        script_segments = script_segments[:3]
+        
+    script_input = script_segments if script_segments else script_data.get('script_text')
     
     input_len = len(str(script_input)) # Approx length for logging
     print(f"Generating audio (Input Len: {input_len})...")
-    result = await content_gen.generate_audio(script_input, audio_path)
+    # Pass script_data (which includes 'used_subreddit') as context
+    result = await content_gen.generate_audio(script_input, audio_path, context_data=script_data)
     
     if not result:
         print("Failed to generate audio.")
@@ -75,7 +81,7 @@ async def run_one_cycle(reddit, content_gen, video_engine, history, index, total
     
     # 5. Create Video
     try:
-        final_video_path = video_engine.create_video(audio_path, script_data, sync_path=sync_path)
+        final_video_path = video_engine.create_video(audio_path, script_data, sync_path=sync_path, mode=mode)
         if final_video_path:
             # Save Metadata Sidecar for Scheduler
             base_name = os.path.splitext(final_video_path)[0]
@@ -105,9 +111,11 @@ async def run_one_cycle(reddit, content_gen, video_engine, history, index, total
 async def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--count", type=int, default=1, help="Number of videos to generate")
+    parser.add_argument("--mode", type=str, default="classic", choices=["classic", "brainrot"], help="Video Style: 'classic' (Fullscreen Gameplay) or 'brainrot' (Split Screen)")
+    parser.add_argument("--fast", action="store_true", help="Debug Mode: Generate a very short video")
     args = parser.parse_args()
     
-    print(f"--- AI Instagram Bot Starting (Target: {args.count} videos) ---")
+    print(f"--- AI Instagram Bot Starting (Target: {args.count} videos | Mode: {args.mode}) ---")
     
     # 1. Initialize Modules
     reddit = RedditClient(subreddits=REDDIT_SUBREDDITS)
@@ -117,7 +125,7 @@ async def main():
     
     successful = 0
     for i in range(1, args.count + 1):
-        if await run_one_cycle(reddit, content_gen, video_engine, history, i, args.count):
+        if await run_one_cycle(reddit, content_gen, video_engine, history, i, args.count, mode=args.mode, fast_mode=args.fast):
             successful += 1
         
         # Small delay between batches to be nice to APIs?

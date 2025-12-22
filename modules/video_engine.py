@@ -22,9 +22,10 @@ class VideoEngine:
             raise FileNotFoundError(f"No background videos found in {self.background_path}")
         return os.path.join(self.background_path, random.choice(files))
 
-    def create_video(self, audio_path, script_data, sync_path=None):
+    def create_video(self, audio_path, script_data, sync_path=None, mode="brainrot"):
         """
-        Merges background video with audio AND image overlays using MoviePy 1.x syntax.
+        Merges background video with audio AND image overlays.
+        mode: "brainrot" (Split Screen) or "classic" (Full Gameplay)
         """
         import json
         print(f"DEBUG SCRIPT DATA: {json.dumps(script_data, indent=2)}")
@@ -36,43 +37,81 @@ class VideoEngine:
             from modules.image_downloader import download_image
             import math
 
-            print("Initializing MoviePy editor...")
+            # Load Background Video (Bottom/Full)
             bg_video_path = self.get_random_background()
             
+            # Load Top Background (Satisfying) - Only used in brainrot mode
+            top_bg_dir = "assets/top_backgrounds"
+            top_bg_path = None
+            if mode == "brainrot" and os.path.exists(top_bg_dir):
+                top_files = [f for f in os.listdir(top_bg_dir) if f.endswith(('.mp4', '.mov'))]
+                if top_files:
+                    top_bg_path = os.path.join(top_bg_dir, random.choice(top_files))
+            
+            # --- HELPER: Process Background Clip ---
+            def prepare_bg_clip(path, target_duration, is_split=False):
+                clip = VideoFileClip(path)
+                # Loop if too short
+                if clip.duration < target_duration:
+                    clip = vfx.loop(clip, duration=target_duration)
+                # Random Seek if too long
+                if clip.duration > target_duration:
+                    max_start = clip.duration - target_duration
+                    start_t = random.uniform(0, max_start)
+                    clip = clip.subclip(start_t, start_t + target_duration)
+                else:
+                    clip = clip.set_duration(target_duration)
+                
+                # --- ROBUST CROP "COVER" LOGIC ---
+                # Target: 1080x960 (Split) OR 1080x1920 (Classic)
+                target_w = 1080
+                target_h = 960 if is_split else 1920
+                
+                # Current dimensions
+                w, h = clip.size
+                
+                # Calculate Aspect Ratios
+                target_ratio = target_w / target_h
+                current_ratio = w / h
+                
+                if current_ratio > target_ratio:
+                    # Video is Wider than target -> Resize by Height
+                    new_h = target_h
+                    new_w = int(w * (target_h / h))
+                    clip = clip.resize(height=new_h)
+                    
+                    # Center Crop Width
+                    clip = vfx.crop(clip, x1=(new_w//2 - target_w//2), width=target_w, height=target_h)
+                else:
+                    # Video is Taller/Narrower -> Resize by Width
+                    new_w = target_w
+                    new_h = int(h * (target_w / w))
+                    clip = clip.resize(width=new_w)
+                    
+                    # Center Crop Height
+                    clip = vfx.crop(clip, y1=(new_h//2 - target_h//2), width=target_w, height=target_h)
+                
+                return clip
+
             # Load Audio
             audio_clip = AudioFileClip(audio_path)
             audio_duration = audio_clip.duration
+
+            print(f"Processing Video (Mode: {mode})...")
             
-            # Load Background Video
-            video_clip = VideoFileClip(bg_video_path)
-            
-            # Loop/Cut Logic (MoviePy 1.x)
-            if video_clip.duration < audio_duration:
-                # vfx.loop in 1.x
-                video_clip = vfx.loop(video_clip, duration=audio_duration)
-            
-            if video_clip.duration > audio_duration:
-                max_start = video_clip.duration - audio_duration
-                start_time = random.uniform(0, max_start)
-                print(f"Randomly seeking to {start_time:.2f}s")
-                # .subclip in 1.x
-                video_clip = video_clip.subclip(start_time, start_time + audio_duration)
+            if mode == "brainrot" and top_bg_path:
+                print(f"Top Layer: {os.path.basename(top_bg_path)}")
+                # Prepare half-height clips
+                bottom_clip = prepare_bg_clip(bg_video_path, audio_duration, is_split=True)
+                top_clip = prepare_bg_clip(top_bg_path, audio_duration, is_split=True)
+                
+                # Stack Logic: Top on top, Bottom on bottom
+                from moviepy.editor import clips_array
+                video_clip = clips_array([[top_clip], [bottom_clip]])
             else:
-                 video_clip = video_clip.set_duration(audio_duration)
-            
-            # --- 9:16 CROP LOGIC (vfx.crop in 1.x) ---
-            w, h = video_clip.size
-            target_ratio = 9/16
-            current_ratio = w/h
-            
-            if current_ratio > target_ratio:
-                new_w = int(h * target_ratio)
-                if new_w % 2 != 0: new_w -= 1
-                video_clip = vfx.crop(video_clip, x1=(w/2 - new_w/2), width=new_w, height=h)
-            else:
-                new_h = int(w / target_ratio)
-                if new_h % 2 != 0: new_h -= 1
-                video_clip = vfx.crop(video_clip, y1=(h/2 - new_h/2), width=w, height=new_h)
+                # Classic Mode or Fallback
+                print(f"Using Single Layer (Background: {os.path.basename(bg_video_path)})")
+                video_clip = prepare_bg_clip(bg_video_path, audio_duration, is_split=False)
             
             final_w, final_h = video_clip.size
 
@@ -151,20 +190,32 @@ class VideoEngine:
             # Layer 1: Background Video
             # Layer 2: Image Overlays
             
-            video_with_images = CompositeVideoClip([video_clip] + image_clips)
-            video_with_images = video_with_images.set_audio(audio_clip)
+            # --- COMPOSITING ---
+            # Layer Order: Background < Images < Subtitles
+            # Flattening the layers into a single CompositeVideoClip for stability
+            
+            final_layers = [video_clip] + image_clips
 
             # --- SUBTITLES ---
             subtitle_file = sync_path
-            if not subtitle_file or not os.path.exists(subtitle_file):
-                 base_name = os.path.splitext(audio_path)[0]
-                 subtitle_file = base_name + ".vtt"
-
-            final_clip = video_with_images 
             
+            if not subtitle_file or not os.path.exists(subtitle_file):
+                base_name = os.path.splitext(audio_path)[0]
+                if os.path.exists(base_name + ".json"):
+                    subtitle_file = base_name + ".json"
+                elif os.path.exists(base_name + ".vtt"):
+                    subtitle_file = base_name + ".vtt"
+
             if subtitle_file and os.path.exists(subtitle_file):
-                print(f"Adding subtitles from {subtitle_file}...")
-                final_clip = add_subtitles(video_with_images, subtitle_file, font_path=FONT_PATH)
+                print(f"Adding subtitles from {os.path.basename(subtitle_file)}...")
+                sub_clips = add_subtitles(video_clip, subtitle_file, font_path=FONT_PATH, return_clips=True)
+                final_layers.extend(sub_clips)
+            else:
+                print("Warning: No subtitle file found. Skipping subtitles.")
+
+            # Final Stitch
+            final_clip = CompositeVideoClip(final_layers)
+            final_clip = final_clip.set_audio(audio_clip)
             
             # --- 6. Audio Mixing (TTS + BGM) ---
             final_audio = audio_clip # Use the loaded audio_clip as the base for final_audio

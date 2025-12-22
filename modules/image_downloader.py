@@ -57,77 +57,98 @@ EMOTION_QUERIES = {
 }
 
 def download_image(query, output_dir, filename_prefix="img"):
-    # 1. Check if query is a Mood and map to curated term
-    search_term = query
+    # 1. Prepare Search Strategies
+    strategies = []
+    
+    # Strategy 1: Curated Mood Query (if applicable)
     if query in EMOTION_QUERIES:
-        search_term = random.choice(EMOTION_QUERIES[query])
-        print(f"Mapped Mood '{query}' -> Curated Query: '{search_term}'")
+        strategies.append(random.choice(EMOTION_QUERIES[query]))
+    
+    # Strategy 2: Direct query
+    strategies.append(query)
+    
+    # Strategy 3: Modified Query (Meme-focused)
+    if query not in EMOTION_QUERIES:
+        strategies.append(f"{query} funny meme")
     else:
-        # Fallback for old keywords or unmapped moods
-        print(f"Using direct query: {query}")
+        strategies.append(f"{query} reaction meme")
 
-    print(f"Searching for image: {search_term}")
-    try:
-        from bing_image_downloader import downloader
-        import shutil
-        import glob
+    print(f"Starting persistent search for: '{query}' (Strategies: {len(strategies)})")
+    
+    for i, search_term in enumerate(strategies):
+        print(f"  Attempt {i+1}/{len(strategies)}: Searching for '{search_term}'...")
         
-        # Bing downloader creates its own subfolder structure
-        download_folder = os.path.join(output_dir, "bing_temp")
-        
-        downloader.download(
-            search_term, 
-            limit=5, 
-            output_dir=download_folder, 
-            adult_filter_off=True, 
-            force_replace=False, 
-            timeout=10, 
-            verbose=False
-        )
-        
-        # 2. Find downloaded images
-        # The library creates a subfolder named after the query
-        query_folder = os.path.join(download_folder, search_term)
-        if not os.path.exists(query_folder):
-            # Sometimes it sanitizes the folder name, try globbing
-            subfolders = glob.glob(os.path.join(download_folder, "*"))
-            if subfolders:
-                query_folder = subfolders[0]
-            else:
-                 print("Bing Downloader: No folder created.")
-                 return generate_placeholder(query, output_dir, filename_prefix)
-        
-        # Get all images
-        extensions = ['*.jpg', '*.jpeg', '*.png']
-        images = []
-        for ext in extensions:
-            images.extend(glob.glob(os.path.join(query_folder, ext)))
-            
-        if not images:
-             print("Bing Downloader: No images found in folder.")
-             return generate_placeholder(query, output_dir, filename_prefix)
-             
-        # 3. Pick random image
-        chosen_image = random.choice(images)
-        
-        # 4. Move/Rename to our target output location
-        final_filename = f"{filename_prefix}_{random.randint(1000,9999)}.jpg"
-        final_path = os.path.join(output_dir, final_filename)
-        
-        shutil.move(chosen_image, final_path)
-        print(f"Downloaded & Moved: {final_path}")
-        
-        # 5. Cleanup temp folder
         try:
-            shutil.rmtree(download_folder)
-        except:
-            pass # Non-critical
+            from bing_image_downloader import downloader
+            import shutil
+            import glob
             
-        return final_path
+            download_folder = os.path.join(output_dir, "bing_temp")
+            if os.path.exists(download_folder):
+                shutil.rmtree(download_folder)
+            
+            downloader.download(
+                search_term, 
+                limit=5, # Increased limit for better hit rate
+                output_dir=download_folder, 
+                adult_filter_off=True, 
+                force_replace=False, 
+                timeout=10, # Increased timeout
+                verbose=False
+            )
+            
+            # Find downloaded images
+            query_folder = os.path.join(download_folder, search_term)
+            if not os.path.exists(query_folder):
+                subfolders = glob.glob(os.path.join(download_folder, "*"))
+                if subfolders:
+                    query_folder = subfolders[0]
+            
+            if os.path.exists(query_folder):
+                extensions = ['*.jpg', '*.jpeg', '*.png']
+                images = []
+                for ext in extensions:
+                    images.extend(glob.glob(os.path.join(query_folder, ext)))
+                    
+                if images:
+                    chosen_image = random.choice(images)
+                    final_filename = f"{filename_prefix}_{random.randint(1000,9999)}.jpg"
+                    final_path = os.path.join(output_dir, final_filename)
+                    shutil.move(chosen_image, final_path)
+                    print(f"  Success on attempt {i+1}: {final_path}")
+                    
+                    # Cleanup
+                    try: shutil.rmtree(download_folder)
+                    except: pass
+                    return final_path
+            
+            print(f"  Attempt {i+1} failed to yield images.")
 
+        except Exception as e:
+            print(f"  Attempt {i+1} error: {e}")
+            
+    # 2. Final Fallback: DuckDuckGo Search
+    print("Bing failed all attempts. Trying DuckDuckGo...")
+    try:
+        with DDGS() as ddgs:
+            results = list(ddgs.images(query, max_results=5))
+            if results:
+                url = results[0]['image']
+                final_filename = f"{filename_prefix}_ddg_{random.randint(1000,9999)}.jpg"
+                final_path = os.path.join(output_dir, final_filename)
+                
+                resp = requests.get(url, timeout=10)
+                if resp.status_code == 200:
+                    with open(final_path, 'wb') as f:
+                        f.write(resp.content)
+                    print(f"  DuckDuckGo Success: {final_path}")
+                    return final_path
     except Exception as e:
-        print(f"Image search error: {e}")
-        return generate_placeholder(query, output_dir, filename_prefix)
+        print(f"  DuckDuckGo error: {e}")
+
+    # 3. Total Disaster Fallback
+    print("All search methods failed. Using placeholder as absolute last resort.")
+    return generate_placeholder(query, output_dir, filename_prefix)
 
 def generate_placeholder(text, output_dir, prefix):
     """Generates a reliable placeholder image if search fails."""

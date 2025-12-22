@@ -76,7 +76,13 @@ def create_caption_clip(text, duration, video_w, video_h, font_path=None):
     
     # Create ImageClip
     img_array = np.array(img)
-    txt_clip = ImageClip(img_array).set_duration(duration)
+    
+    # Split RGB and Alpha for explicit mask handling (MoviePy 1.x reliability)
+    rgb_array = img_array[:, :, :3]
+    alpha_array = img_array[:, :, 3] / 255.0
+
+    txt_clip = ImageClip(rgb_array).set_duration(duration)
+    mask_clip = ImageClip(alpha_array, ismask=True).set_duration(duration)
     
     # Center horizontally, 60% down vertically
     txt_clip = txt_clip.set_position(('center', video_h * 0.6))
@@ -91,15 +97,20 @@ def create_caption_clip(text, duration, video_w, video_h, font_path=None):
         else:
             return 1.0
             
-    # Apply resize effect
-    txt_clip = txt_clip.resize(resize_func) 
+    # Apply resize to BOTH clip and mask to ensure they stay synced
+    txt_clip = txt_clip.resize(resize_func)
+    mask_clip = mask_clip.resize(resize_func)
+    
+    # Re-apply the mask to the resized clip
+    txt_clip.mask = mask_clip
     
     return txt_clip
 
-def add_subtitles(video_clip, data_path, font_path="arial.ttf"):
+def add_subtitles(video_clip, data_path, font_path="arial.ttf", return_clips=False):
     """
     Overlays subtitles onto the video_clip.
     data_path: Path to either .vtt or .json (word timestamps).
+    return_clips: If True, returns the list of text clips instead of a CompositeVideoClip.
     """
     subtitle_clips = []
     w, h = video_clip.size
@@ -151,5 +162,8 @@ def add_subtitles(video_clip, data_path, font_path="arial.ttf"):
                 txt_clip = txt_clip.set_start(current_time)
                 subtitle_clips.append(txt_clip)
                 current_time += word_duration
+        
+    if return_clips:
+        return subtitle_clips
         
     return CompositeVideoClip([video_clip] + subtitle_clips)

@@ -18,38 +18,52 @@ class ContentGenerator:
         """
         Uses LLM to clean up Reddit post and create a caption.
         """
-        system_prompt = """You are a viral TikTok/Reels scriptwriter. 
+        # --- PERSONA LOGIC ---
+        subreddit = post_data.get('subreddit', '').lower()
+        
+        # Default Persona
+        persona_role = "HECKLER: Interrupts every 2-3 sentences to roast the OP, scream 'WHAT?!', or hype up the drama."
+        
+        # Subreddit-Specific Personas
+        if 'amitheasshole' in subreddit:
+            persona_role = "THE JUDGE: Deep, authoritative voice. Interrupts to pass judgment (e.g., 'GUILTY!', 'Objection!', 'You are the problem')."
+        elif 'tifu' in subreddit:
+             persona_role = "THE ROASTER: Laughs at the OP's pain. Mocking tone. (e.g., 'You idiot!', 'Look at this guy!', 'Embarrassing!')."
+        elif 'creepy' in subreddit or 'nosleep' in subreddit:
+             persona_role = "THE COWARD: Nervous, whispering voice. Warns the OP to run. (e.g., 'Don't look back!', 'Run bro!', 'I hear something...')."
+             
+        system_prompt = f"""You are a viral TikTok/Reels scriptwriter. 
         Your goal is to transform a Reddit story into a highly engaging, "Heckler-Style" video script.
         
         STRUCTURE:
         The video features TWO voices:
         1. **NARRATOR**: Tells the story seriously.
-        2. **HECKLER**: Interrupts every 2-3 sentences to roast the OP, scream "WHAT?!", or hype up the drama.
+        2. **{persona_role}**
         
         REQUIREMENTS:
         - **HOOK (0-3s)**: Narrator starts with a shocker.
-        - **INTERRUPTIONS**: The Heckler should interrupt 2-3 times total. Keep them short (e.g., "Bro, dump him!", "Ain't no way!", "She did WHAT?").
+        - **INTERRUPTIONS**: The Heckler/Persona should interrupt 2-3 times total. Keep them short.
         - **CTA**: Narrator asks the question, Heckler demands the comment.
         
         Output format (JSON):
-        {
+        {{
           "script_segments": [
-            {"role": "narrator", "text": "My best friend tried to turn my empty apartment..."},
-            {"role": "heckler", "text": "Bro, lock the doors!"},
-            {"role": "narrator", "text": "...into her personal storage unit."}
+            {{"role": "narrator", "text": "My best friend tried to turn my empty apartment..."}},
+            {{"role": "heckler", "text": "Bro, lock the doors!"}},
+            {{"role": "narrator", "text": "...into her personal storage unit."}}
           ],
           "caption": "Viral caption with hashtags.",
           "title_overlay": "Punchy 3-5 word cover title",
           "hook_mood": "One strict emotion from: 'Shock', 'Anger', 'Fear', 'Sadness', 'Joy', 'Disgust', 'Confused', 'Neutral'. Focus on initial feeling.",
           "retention_moods": ["List", "of", "3-5", "strict", "emotions", "that", "match", "the", "story", "progression"],
           "visual_keywords": ["List", "of", "3-5", "specific", "search", "terms", "for", "memes", "related", "to", "the", "story", "e.g.", "cheating boyfriend meme", "angry karen meme", "spiderman pointing meme"]
-        }
+        }}
         """
         
         user_content = f"Title: {post_data['title']}\n\nBody: {post_data['text']}"
         
         try:
-            print("Generating script from LLM...")
+            print(f"Generating script from LLM (Persona: {persona_role[:30]}...)...")
             response = self.client.chat.completions.create(
                 model=self.model,
                 messages=[
@@ -62,13 +76,16 @@ class ContentGenerator:
             print(f"DEBUG LLM CONTENT: {content}")
             data = json.loads(content)
             
+            # Helper to pass subreddit down for voice selection later
+            data['used_subreddit'] = subreddit 
+            
             # Ensure keys exist
             if 'title_overlay' not in data:
                 data['title_overlay'] = post_data['title'][:30] 
             if 'caption' not in data:
                  data['caption'] = f"{post_data['title']} #reddit #viral"
             
-            # Backwards compatibility for single-string users (if any)
+            # Backwards compatibility
             if 'script_segments' not in data and 'script_text' in data:
                  data['script_segments'] = [{'role': 'narrator', 'text': data['script_text']}]
             
@@ -77,7 +94,7 @@ class ContentGenerator:
             print(f"Error generating script: {e}")
             return None
 
-    async def generate_audio(self, script_input, output_filename="speech.mp3", voice=None):
+    async def generate_audio(self, script_input, output_filename="speech.mp3", voice=None, context_data=None):
         """
         Generates TTS audio AND precise word-level JSON timestamps.
         Supports 'script_input' as either a string (single voice) or list of dicts (multi-voice).
@@ -86,7 +103,7 @@ class ContentGenerator:
             # 1. Handle Multi-Voice "Heckler" Mode
             if isinstance(script_input, list):
                 print(f"Generating Multi-Voice Audio ({len(script_input)} segments)...")
-                return await self._generate_multi_voice_audio(script_input, output_filename)
+                return await self._generate_multi_voice_audio(script_input, output_filename, context_data)
                 
             # 2. Handle Single Voice Mode (Legacy/Fallback)
             text = script_input
@@ -145,22 +162,32 @@ class ContentGenerator:
             
         return output_abs, json_filename, word_data
 
-    async def _generate_multi_voice_audio(self, segments, final_output_filename):
+    async def _generate_multi_voice_audio(self, segments, final_output_filename, context_data=None):
         """Stitches multiple TTS segments into one file and merges timestamps."""
         from moviepy.editor import concatenate_audioclips, AudioFileClip
         
         # Voice Mapping
         NARRATOR_VOICE = "en-US-GuyNeural"
         
-        # Randomize Heckler Voice for variety
-        HECKLER_POOL = [
-            "en-US-ChristopherNeural", 
-            "en-US-EricNeural", 
-            "en-US-RogerNeural",
-            "en-US-SteffanNeural"
-        ]
-        HECKLER_VOICE = random.choice(HECKLER_POOL)
-        print(f"  Selected Heckler Voice: {HECKLER_VOICE}")
+        # Determine Heckler Voice based on Context (Subreddit)
+        subreddit = ""
+        if context_data and 'used_subreddit' in context_data:
+            subreddit = context_data['used_subreddit']
+            
+        # Default Random Pool
+        heckler_voice = random.choice(["en-US-ChristopherNeural", "en-US-EricNeural", "en-US-RogerNeural"])
+        
+        if 'amitheasshole' in subreddit:
+             heckler_voice = "en-US-RogerNeural" # Deep/Authoritative
+             print("  Persona: Judge (en-US-RogerNeural)")
+        elif 'creepy' in subreddit or 'nosleep' in subreddit:
+             heckler_voice = "en-US-SteffanNeural" # Softer/Anxious
+             print("  Persona: Coward (en-US-SteffanNeural)")
+        elif 'tifu' in subreddit:
+             heckler_voice = "en-US-ChristopherNeural" # Aggressive
+             print("  Persona: Roaster (en-US-ChristopherNeural)")
+        else:
+            print(f"  Persona: Random Heckler ({heckler_voice})")
         
         temp_files = []
         master_word_data = []
@@ -178,7 +205,7 @@ class ContentGenerator:
                 text = seg.get('text', '')
                 
                 # Select Voice
-                voice = HECKLER_VOICE if role == 'heckler' else NARRATOR_VOICE
+                voice = heckler_voice if role == 'heckler' else NARRATOR_VOICE
                 
                 # Generate Temp Segment
                 seg_filename = f"temp_seg_{i}_{random.randint(100,999)}.mp3"
@@ -198,7 +225,27 @@ class ContentGenerator:
                     current_offset += duration
                     
                     # Append Data
-                    master_word_data.extend(data)
+                    if not data:
+                        print(f"  Warning: No timing data for segment {i}. Estimating...")
+                        words = text.split()
+                        if words:
+                            total_chars = sum(len(w) for w in words)
+                            if total_chars == 0: total_chars = 1
+                            char_duration = duration / total_chars
+                            est_data = []
+                            est_offset = current_offset - duration # current_offset was already incremented
+                            temp_time = est_offset
+                            for w in words:
+                                w_dur = len(w) * char_duration
+                                est_data.append({
+                                    "word": w,
+                                    "start": temp_time,
+                                    "end": temp_time + w_dur
+                                })
+                                temp_time += w_dur
+                            master_word_data.extend(est_data)
+                    else:
+                        master_word_data.extend(data)
             
             # Stitch Audio
             print("  Stitching dialogue segments...")
