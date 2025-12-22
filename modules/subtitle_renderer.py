@@ -78,8 +78,8 @@ def create_caption_clip(text, duration, video_w, video_h, font_path=None):
     img_array = np.array(img)
     txt_clip = ImageClip(img_array).set_duration(duration)
     
-    # Center perfectly on screen
-    txt_clip = txt_clip.set_position(('center', 'center'))
+    # Center horizontally, 60% down vertically
+    txt_clip = txt_clip.set_position(('center', video_h * 0.6))
     
     # "Pop" Effect (Resize from 0.5 to 1.2 then 1.0)
     # Using MoviePy 1.x logic (resize accepts function)

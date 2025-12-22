@@ -31,8 +31,8 @@ class ContentGenerator:
           "script_text": "The full spoken script including Hook, Story, and CTA. Approx 150-180 words.",
           "caption": "Viral caption with hashtags.",
           "title_overlay": "Punchy 3-5 word cover title",
-          "hook_image_keyword": "A single, highly visual noun/concept related to the hook (e.g. 'Ghost', 'Money', 'Police Car') for an image search.",
-          "retention_keywords": ["List", "of", "3-5", "single", "visual", "keywords", "from", "the", "story"]
+          "hook_mood": "One strict emotion from: 'Shock', 'Anger', 'Fear', 'Sadness', 'Joy', 'Disgust', 'Confused', 'Neutral'. Focus on the initial feeling.",
+          "retention_moods": ["List", "of", "3-5", "strict", "emotions", "from", "the", "same", "list", "that", "match", "the", "story", "progression"]
         }
         """
         
@@ -49,6 +49,7 @@ class ContentGenerator:
                 response_format={ "type": "json_object" }
             )
             content = response.choices[0].message.content
+            print(f"DEBUG LLM CONTENT: {content}")
             data = json.loads(content)
             
             # Ensure keys exist

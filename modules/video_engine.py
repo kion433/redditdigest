@@ -26,6 +26,8 @@ class VideoEngine:
         """
         Merges background video with audio AND image overlays using MoviePy 1.x syntax.
         """
+        import json
+        print(f"DEBUG SCRIPT DATA: {json.dumps(script_data, indent=2)}")
         try:
             # MoviePy 1.x imports
             from moviepy.editor import VideoFileClip, AudioFileClip, CompositeVideoClip, ImageClip
@@ -93,29 +95,32 @@ class VideoEngine:
                 # Center it
                 img = img.set_position(("center", "center"))
                 
-                # Simple Fade In/Out (crossfadein/out methods)
-                img = img.crossfadein(0.2).crossfadeout(0.2)
+                # Revert to Fade In (Pop animation caused visibility issues)
+                img = img.crossfadein(0.5)
+                
+                # Simple Fade Out at end
+                img = img.crossfadeout(0.5)
                 
                 return img
 
             # A. Hook Image
-            hook_kw = script_data.get('hook_image_keyword')
-            if hook_kw:
-                print(f"Downloading Hook Image: {hook_kw}")
-                hook_path = download_image(hook_kw, temp_img_dir, "hook")
+            hook_mood = script_data.get('hook_mood')
+            if hook_mood:
+                print(f"Downloading Hook Image (Mood: {hook_mood})")
+                hook_path = download_image(hook_mood, temp_img_dir, "hook")
                 hook_clip = create_centered_image_clip(hook_path, 0, 3)
                 if hook_clip: image_clips.append(hook_clip)
 
             # B. Retention Images
-            retention_kws = script_data.get('retention_keywords', [])
-            if retention_kws:
+            retention_moods = script_data.get('retention_moods', [])
+            if retention_moods:
                 available_time = audio_duration - 4
                 if available_time > 0:
-                    interval = available_time / (len(retention_kws) + 1)
+                    interval = available_time / (len(retention_moods) + 1)
                     
-                    for i, kw in enumerate(retention_kws):
-                        print(f"Downloading Retention Image: {kw}")
-                        path = download_image(kw, temp_img_dir, f"retention_{i}")
+                    for i, mood in enumerate(retention_moods):
+                        print(f"Downloading Retention Image (Mood: {mood})")
+                        path = download_image(mood, temp_img_dir, f"retention_{i}")
                         start_t = 3 + (i * interval)
                         clip = create_centered_image_clip(path, start_t, 2.5)
                         if clip: image_clips.append(clip)
