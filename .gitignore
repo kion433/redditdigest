@@ -16,3 +16,7 @@ __pycache__/
 # System
 .DS_Store
 Thumbs.db
+
+# Selenium Web Automation
+selenium_profile/
+device_config.json
