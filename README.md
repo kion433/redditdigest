@@ -161,5 +161,3 @@ Follow the prompts. If it fails with "Suspicious Login", try Option B.
 s might be skipping posts. Just run the batch again; it will pick a different subreddit.
 
 ---
-
-# redditdigest
